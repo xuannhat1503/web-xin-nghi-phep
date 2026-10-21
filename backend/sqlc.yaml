@@ -1,0 +1,37 @@
+version: "2"
+sql:
+  - engine: mysql
+    # 000008 (triggers) is excluded: sqlc's MySQL parser does not support CREATE TRIGGER and triggers add no columns.
+    schema:
+      - db/migrations/000001_employees.up.sql
+      - db/migrations/000002_settings.up.sql
+      - db/migrations/000003_calendar.up.sql
+      - db/migrations/000004_leave.up.sql
+      - db/migrations/000005_notifications.up.sql
+      - db/migrations/000006_auth.up.sql
+      - db/migrations/000007_operations.up.sql
+      - db/migrations/000011_email_mode.up.sql
+      - db/migrations/000012_leave_types.up.sql
+      - db/migrations/000013_email_live.up.sql
+    queries: db/queries
+    gen:
+      go:
+        package: store
+        out: internal/store
+        emit_empty_slices: true
+        emit_enum_valid_method: true
+        emit_all_enum_values: true
+        overrides:
+          # go-sql-driver returns TIME as text even with parseTime=true.
+          - db_type: time
+            go_type: string
+          - db_type: time
+            nullable: true
+            go_type:
+              type: NullString
+              import: database/sql
+          - db_type: json
+            go_type: encoding/json.RawMessage
+          - db_type: json
+            nullable: true
+            go_type: github.com/g-asiapacific/elm/backend/internal/dbtypes.JSON

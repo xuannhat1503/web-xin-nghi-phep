@@ -1,0 +1,62 @@
+# --- Secrets & local config ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+client_secret*.json
+credentials*.json
+token*.json
+oauth*.json
+
+# --- Session / runtime data ---
+sessions/
+*.session
+tmp/
+
+# --- Database dumps & backups ---
+*.sql.gz
+*.dump
+*.bak
+backups/
+dumps/
+
+# --- Logs ---
+*.log
+logs/
+
+# --- Go ---
+/backend/bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.*
+
+# --- Local tool binaries (sqlc downloaded per README) ---
+/tools/
+
+# --- Node / SvelteKit ---
+node_modules/
+/frontend/.svelte-kit/
+/frontend/build/
+/frontend/.output/
+/frontend/vite.config.*.timestamp-*
+
+# --- OS / editors ---
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+
+# --- Build output & backups ---
+/backend/dist/
+backup*.sql
+*.sql.gz

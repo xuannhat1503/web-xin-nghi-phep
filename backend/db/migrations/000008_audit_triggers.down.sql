@@ -1,0 +1,16 @@
+DROP TRIGGER IF EXISTS trg_leave_type_policies_no_delete;
+DROP TRIGGER IF EXISTS trg_leave_type_policies_no_update;
+DROP TRIGGER IF EXISTS trg_policy_versions_no_delete;
+DROP TRIGGER IF EXISTS trg_policy_versions_no_update;
+DROP TRIGGER IF EXISTS trg_leave_request_versions_no_delete;
+DROP TRIGGER IF EXISTS trg_leave_request_versions_no_update;
+DROP TRIGGER IF EXISTS trg_leave_request_events_no_delete;
+DROP TRIGGER IF EXISTS trg_leave_request_events_no_update;
+DROP TRIGGER IF EXISTS trg_calendar_day_events_no_delete;
+DROP TRIGGER IF EXISTS trg_calendar_day_events_no_update;
+DROP TRIGGER IF EXISTS trg_settings_events_no_delete;
+DROP TRIGGER IF EXISTS trg_settings_events_no_update;
+DROP TRIGGER IF EXISTS trg_manager_events_no_delete;
+DROP TRIGGER IF EXISTS trg_manager_events_no_update;
+DROP TRIGGER IF EXISTS trg_employee_events_no_delete;
+DROP TRIGGER IF EXISTS trg_employee_events_no_update;
