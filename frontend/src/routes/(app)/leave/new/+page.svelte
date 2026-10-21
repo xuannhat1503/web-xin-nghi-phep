@@ -17,7 +17,7 @@
 
 <svelte:head><title>{i18n.t('leave.newTitle')} · G-ASIAPACIFIC</title></svelte:head>
 
-<PageHeader title={i18n.t('leave.newTitle')} description={i18n.t('leave.newDesc')}>
+<PageHeader title={i18n.t('leave.newTitle')}>
 	{#snippet actions()}
 		<form method="POST" action="?/create">
 			<button

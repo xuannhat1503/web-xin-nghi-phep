@@ -19,7 +19,7 @@
 
 <svelte:head><title>{i18n.t('hist.title')} · G-ASIAPACIFIC</title></svelte:head>
 
-<PageHeader title={i18n.t('hist.title')} description={i18n.t('hist.desc')} />
+<PageHeader title={i18n.t('hist.title')} />
 <div class="mt-6"><RequestFilters /></div>
 <section
 	class="mt-4 transition-opacity {navigating.to ? 'opacity-60' : ''}"

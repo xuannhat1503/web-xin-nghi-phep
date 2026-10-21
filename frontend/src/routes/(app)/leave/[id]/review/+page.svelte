@@ -111,7 +111,6 @@
 
 	<section class="rounded-xl border border-slate-200 bg-white p-5" aria-labelledby="mail-h">
 		<h2 id="mail-h" class="font-semibold">{i18n.t('review.email')}</h2>
-		<p class="mt-1 text-xs text-slate-500">{i18n.t('review.emailNote')}</p>
 		{#if data.review.email_preview}
 			{@const m = data.review.email_preview}
 			<dl class="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">

@@ -373,8 +373,6 @@ export const en: Record<MessageKey, string> = {
 	'toast.submitted': 'Request {code} submitted. Your manager will review it.',
 
 	'leave.newTitle': 'New leave request',
-	'leave.newDesc':
-		'Your request is saved automatically as a draft. It is only sent when you confirm it.',
 	'leave.drafts': 'Your drafts',
 	'leave.noDrafts': 'You have no drafts.',
 	'leave.startNew': 'Start a new request',
@@ -386,8 +384,6 @@ export const en: Record<MessageKey, string> = {
 	'leave.updatedAt': 'Updated {at}',
 	'leave.applicant': 'Applicant',
 	'leave.employeeName': 'Employee name',
-	'leave.nameHelp':
-		'The name written on this request and its emails. Correct it if your Google account name is wrong; your name in the app does not change.',
 	'issue.name_invalid': 'Name must be 2-100 characters.',
 	'leave.employeeEmail': 'Employee email',
 	'leave.manager': 'Direct manager (reviewer)',
@@ -414,7 +410,6 @@ export const en: Record<MessageKey, string> = {
 	'leave.reasonText': 'Describe the reason',
 	'leave.reasonTextPh': 'Briefly describe the reason',
 	'leave.total': 'Total requested time-off (estimate)',
-	'leave.totalHint': 'The official duration is recalculated when you submit.',
 	'leave.totalValue': '{hours} ({days})',
 	'leave.calculating': 'Calculating…',
 	'leave.breakdown': 'Breakdown by day',
@@ -439,8 +434,7 @@ export const en: Record<MessageKey, string> = {
 	'leave.legend.rest': 'Regular day off',
 
 	'review.title': 'Review your leave request',
-	'review.desc':
-		'Check everything carefully. The request is only sent when you press “Confirm & submit”.',
+	'review.desc': 'Check the details before you submit.',
 	'review.back': 'Back to edit',
 	'review.confirm': 'Confirm & submit',
 	'review.blocking': 'This request cannot be submitted yet',
@@ -533,7 +527,6 @@ export const en: Record<MessageKey, string> = {
 	'notif.REVIEWER_CHANGED': 'The reviewer of your request {code} is now {name}.',
 	'notif.REMINDER': 'Reminder {n}: request {code} from {name} is waiting for your review.',
 	'hist.title': 'Request history',
-	'hist.desc': 'All your requests, 10 per page.',
 	'filter.month': 'Month',
 	'filter.year': 'Year',
 	'filter.status': 'Status',
@@ -593,7 +586,6 @@ export const en: Record<MessageKey, string> = {
 	'ld.viewAll': 'View all',
 	'ld.none': 'Nothing here.',
 	'lr.title': 'Requests to review',
-	'lr.desc': 'Only requests currently assigned to you.',
 	'lrd.back': '← Requests to review',
 	'lrd.employee': 'Employee',
 	'lrd.approve': 'Approve',
@@ -666,8 +658,6 @@ export const en: Record<MessageKey, string> = {
 	'toast.emailSaved': 'Email settings saved.',
 	'nav.emailLog': 'Email log',
 	'review.email': 'Email preview',
-	'review.emailNote':
-		'When you confirm and submit, this email goes to the reviewer (if an Admin has turned email sending on).',
 	'toast.ccSaved': 'Finance email list saved.',
 	'outbox.title': 'Email queue',
 	'outbox.desc':

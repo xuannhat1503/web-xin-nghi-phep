@@ -233,7 +233,6 @@
 	title={init.request_code
 		? i18n.t('req.title', { code: init.request_code })
 		: i18n.t('leave.newTitle')}
-	description={i18n.t('leave.newDesc')}
 />
 
 {#if init.status === 'NEEDS_CHANGES' && init.change_request_reason}
@@ -279,13 +278,11 @@
 						class={input}
 						maxlength="100"
 						bind:value={employeeName}
-						aria-describedby="emp-name-help"
 						aria-invalid={!!fieldIssue('employee_name')}
 					/>
 					{#if hydrated && fieldIssue('employee_name')}<p class="mt-1 text-sm text-red-700">
 							{issueText(i18n, fieldIssue('employee_name')!)}
 						</p>{/if}
-					<p id="emp-name-help" class="mt-1 text-xs text-slate-500">{i18n.t('leave.nameHelp')}</p>
 				</div>
 				<div>
 					<label for="emp-email" class="block text-sm font-medium"
@@ -505,7 +502,6 @@
 						evaluation?.minutes_per_day ?? policy.minutes_per_day
 					)}{:else}—{/if}
 			</p>
-			<p class="mt-1 text-xs text-brand-800/80">{i18n.t('leave.totalHint')}</p>
 
 			{#if calc && calc.days.length > 0}
 				<details class="mt-3 text-sm" open={calc.days.length <= 5}>

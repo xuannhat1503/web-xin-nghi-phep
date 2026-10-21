@@ -370,7 +370,6 @@ export const vi = {
 
 	// Leave form (Phase 4)
 	'leave.newTitle': 'Tạo đơn nghỉ',
-	'leave.newDesc': 'Đơn được tự động lưu dưới dạng nháp. Đơn chỉ được gửi khi bạn xác nhận.',
 	'leave.drafts': 'Bản nháp của bạn',
 	'leave.noDrafts': 'Bạn chưa có bản nháp nào.',
 	'leave.startNew': 'Tạo đơn mới',
@@ -382,8 +381,6 @@ export const vi = {
 	'leave.updatedAt': 'Cập nhật {at}',
 	'leave.applicant': 'Người xin nghỉ',
 	'leave.employeeName': 'Họ tên',
-	'leave.nameHelp':
-		'Tên ghi trên đơn này và trong email gửi đi. Sửa nếu tên tài khoản Google chưa đúng; không làm đổi tên hiển thị trong app.',
 	'issue.name_invalid': 'Họ tên gồm 2-100 ký tự.',
 	'leave.employeeEmail': 'Email',
 	'leave.manager': 'Manager trực tiếp (người duyệt)',
@@ -410,7 +407,6 @@ export const vi = {
 	'leave.reasonText': 'Mô tả lý do',
 	'leave.reasonTextPh': 'Mô tả ngắn gọn lý do nghỉ',
 	'leave.total': 'Tổng thời gian nghỉ dự kiến',
-	'leave.totalHint': 'Thời gian chính thức do hệ thống tính lại khi bạn gửi đơn.',
 	'leave.totalValue': '{hours} ({days})',
 	'leave.calculating': 'Đang tính…',
 	'leave.breakdown': 'Chi tiết theo ngày',
@@ -435,7 +431,7 @@ export const vi = {
 	'leave.legend.rest': 'Ngày nghỉ thường lệ',
 
 	'review.title': 'Xem lại đơn nghỉ',
-	'review.desc': 'Kiểm tra kỹ thông tin. Đơn chỉ được gửi khi bạn bấm “Xác nhận & gửi”.',
+	'review.desc': 'Kiểm tra lại thông tin trước khi gửi đơn.',
 	'review.back': 'Quay lại chỉnh sửa',
 	'review.confirm': 'Xác nhận & gửi',
 	'review.blocking': 'Chưa thể gửi đơn',
@@ -527,7 +523,6 @@ export const vi = {
 	'notif.REVIEWER_CHANGED': 'Người duyệt đơn {code} của bạn đã đổi thành {name}.',
 	'notif.REMINDER': 'Nhắc lần {n}: đơn {code} của {name} đang chờ bạn duyệt.',
 	'hist.title': 'Lịch sử đơn nghỉ',
-	'hist.desc': 'Tất cả đơn của bạn, 10 đơn mỗi trang.',
 	'filter.month': 'Tháng',
 	'filter.year': 'Năm',
 	'filter.status': 'Trạng thái',
@@ -587,7 +582,6 @@ export const vi = {
 	'ld.viewAll': 'Xem tất cả',
 	'ld.none': 'Không có đơn nào.',
 	'lr.title': 'Đơn cần duyệt',
-	'lr.desc': 'Chỉ gồm các đơn đang được giao cho bạn.',
 	'lrd.back': '← Đơn cần duyệt',
 	'lrd.employee': 'Nhân viên',
 	'lrd.approve': 'Duyệt',
@@ -659,8 +653,6 @@ export const vi = {
 	'toast.emailSaved': 'Đã lưu cài đặt email.',
 	'nav.emailLog': 'Nhật ký email',
 	'review.email': 'Xem trước email',
-	'review.emailNote':
-		'Khi bạn xác nhận gửi đơn, email này được gửi tới người duyệt (nếu Admin đang bật gửi email).',
 	'toast.ccSaved': 'Đã lưu danh sách email phòng Tài chính.',
 	'outbox.title': 'Hàng đợi email',
 	'outbox.desc':
