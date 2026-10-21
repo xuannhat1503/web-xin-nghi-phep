@@ -60,3 +60,6 @@ desktop.ini
 /backend/dist/
 backup*.sql
 *.sql.gz
+# --- Local project notes (not published) ---
+promt.txt
+mailsample.txt

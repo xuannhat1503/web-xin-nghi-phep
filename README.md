@@ -102,7 +102,7 @@ cd backend
 
 ### 7. Cấu hình Google OAuth (localhost)
 
-1. <https://console.cloud.google.com/> → tạo project → **Google Auth Platform / OAuth consent screen**: Audience **External**, trạng thái **Testing**, thêm **Test users** (`xnnht1503@gmail.com` và các Gmail dùng để test).
+1. <https://console.cloud.google.com/> → tạo project → **Google Auth Platform / OAuth consent screen**: Audience **External**, trạng thái **Testing**, thêm **Test users** (các Gmail dùng để test, gồm email trong `BOOTSTRAP_ADMIN_EMAILS`).
 2. **Clients → Create client → Web application**
    - Authorized JavaScript origins: `http://localhost:5173`
    - Authorized redirect URIs: `http://localhost:5173/auth/google/callback`
@@ -132,7 +132,7 @@ npm run dev        # http://localhost:5173
 Trình duyệt chỉ làm việc với `http://localhost:5173`. SvelteKit proxy `/api`, `/auth`, `/health` sang Go (cùng origin → cookie HttpOnly, không cần CORS).
 
 ### 10. Đăng nhập Admin
-Mở <http://localhost:5173> → **Sign in with Google** → chọn `xnnht1503@gmail.com`.
+Mở <http://localhost:5173> → **Sign in with Google** → chọn tài khoản có email trong `BOOTSTRAP_ADMIN_EMAILS`.
 Tài khoản có trong `BOOTSTRAP_ADMIN_EMAILS` được tạo thành **ADMIN active ở lần đăng nhập đầu tiên** (chỉ khi tạo mới; Admin bị hạ quyền sau này không tự được nâng lại).
 
 ### 11. Tài khoản khác
