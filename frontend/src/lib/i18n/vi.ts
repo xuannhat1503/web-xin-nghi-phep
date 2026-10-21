@@ -382,6 +382,9 @@ export const vi = {
 	'leave.updatedAt': 'Cập nhật {at}',
 	'leave.applicant': 'Người xin nghỉ',
 	'leave.employeeName': 'Họ tên',
+	'leave.nameHelp':
+		'Tên ghi trên đơn này và trong email gửi đi. Sửa nếu tên tài khoản Google chưa đúng; không làm đổi tên hiển thị trong app.',
+	'issue.name_invalid': 'Họ tên gồm 2-100 ký tự.',
 	'leave.employeeEmail': 'Email',
 	'leave.manager': 'Manager trực tiếp (người duyệt)',
 	'leave.noManager':

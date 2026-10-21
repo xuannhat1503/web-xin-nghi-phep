@@ -386,6 +386,9 @@ export const en: Record<MessageKey, string> = {
 	'leave.updatedAt': 'Updated {at}',
 	'leave.applicant': 'Applicant',
 	'leave.employeeName': 'Employee name',
+	'leave.nameHelp':
+		'The name written on this request and its emails. Correct it if your Google account name is wrong; your name in the app does not change.',
+	'issue.name_invalid': 'Name must be 2-100 characters.',
 	'leave.employeeEmail': 'Employee email',
 	'leave.manager': 'Direct manager (reviewer)',
 	'leave.noManager':

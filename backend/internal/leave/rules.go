@@ -17,13 +17,15 @@ const maxReasonText = 1000
 
 // Fields are the editable parts of a request. Everything is optional while drafting.
 type Fields struct {
-	LeaveType  *string `json:"leave_type"`
-	StartDate  *string `json:"start_date"` // YYYY-MM-DD
-	EndDate    *string `json:"end_date"`
-	StartTime  *string `json:"start_time"` // HH:mm
-	EndTime    *string `json:"end_time"`
-	ReasonCode *string `json:"reason_code"`
-	ReasonText string  `json:"reason_text"`
+	// EmployeeName is the applicant name written on this request and its emails (defaults to the profile name).
+	EmployeeName *string `json:"employee_name"`
+	LeaveType    *string `json:"leave_type"`
+	StartDate    *string `json:"start_date"` // YYYY-MM-DD
+	EndDate      *string `json:"end_date"`
+	StartTime    *string `json:"start_time"` // HH:mm
+	EndTime      *string `json:"end_time"`
+	ReasonCode   *string `json:"reason_code"`
+	ReasonText   string  `json:"reason_text"`
 }
 
 // Issue is a machine-readable validation problem; the UI translates Code with Params.
@@ -57,6 +59,9 @@ type parsed struct {
 // lenientCheck validates formats and lengths only (used by auto-save, which must accept partial data).
 func lenientCheck(f Fields, types map[string]settings.LeaveTypeRule) []Issue {
 	var out []Issue
+	if n := utf8.RuneCountInString(requestName(f.EmployeeName, "")); n > maxNameLen {
+		out = append(out, issue("name_invalid", "employee_name", "Name must be 2-100 characters.", nil))
+	}
 	if t := str(f.LeaveType); t != "" && !hasType(types, t) {
 		out = append(out, issue("type_invalid", "leave_type", "Choose a valid leave type.", nil))
 	}
@@ -91,6 +96,7 @@ type checkInput struct {
 	rules       map[civil.Date]workcal.Rule
 	unconfirmed []int // calendar years in range that are not CONFIRMED
 	today       civil.Date
+	profileName string // used when the request has no name of its own
 }
 
 func toWorkcal(p settings.Policy) workcal.Policy {
@@ -163,6 +169,9 @@ func parseRange(f Fields, types map[string]settings.LeaveTypeRule, unit int) (pa
 func evaluate(in checkInput) (parsed, *workcal.Result, []Issue) {
 	p, issues := parseRange(in.fields, in.policy.LeaveTypes, in.policy.LeaveUnitMinutes)
 	issues = append(issues, reasonIssues(p, in)...)
+	if n := utf8.RuneCountInString(requestName(in.fields.EmployeeName, in.profileName)); n < 2 || n > maxNameLen {
+		issues = append(issues, issue("name_invalid", "employee_name", "Name must be 2-100 characters.", nil))
+	}
 	if !p.haveRange {
 		return p, nil, issues
 	}
@@ -253,6 +262,16 @@ func mustJSON(v any) json.RawMessage {
 		panic(err)
 	}
 	return b
+}
+
+const maxNameLen = 100
+
+// requestName is the applicant name of a request: its own (spaces normalized) or, when empty, the profile name.
+func requestName(own *string, profile string) string {
+	if n := strings.Join(strings.Fields(str(own)), " "); n != "" {
+		return n
+	}
+	return strings.Join(strings.Fields(profile), " ")
 }
 
 // hasType reports whether code is an active leave type of the policy.

@@ -38,6 +38,8 @@ export interface LeaveRequest {
 	id: number;
 	request_code: string | null;
 	status: 'DRAFT' | 'PENDING' | 'NEEDS_CHANGES' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
+	/** Name written on this request and its emails (null = the account name). */
+	employee_name: string | null;
 	leave_type: string | null;
 	start_date: string | null;
 	end_date: string | null;

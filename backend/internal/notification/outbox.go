@@ -163,7 +163,7 @@ func (o Outbox) deliver(ctx context.Context, db dbtx, t task, mode EmailMode) er
 	err := db.QueryRowContext(ctx,
 		`SELECT COALESCE(lt.name_en, lr.leave_type), lr.start_date, lr.end_date, lr.start_time, lr.end_time,
 		        lr.total_minutes, lr.reason_code, lr.reason_text, lr.rejection_reason, lr.change_request_reason,
-		        COALESCE(lr.calculation_snapshot, JSON_OBJECT()), e.full_name, rv.full_name, COALESCE(NULLIF(rs.label_en, ''), rs.label),
+		        COALESCE(lr.calculation_snapshot, JSON_OBJECT()), COALESCE(NULLIF(lr.employee_name, ''), e.full_name), rv.full_name, COALESCE(NULLIF(rs.label_en, ''), rs.label),
 		        lr.reviewed_at, COALESCE(pv.timezone, 'Asia/Ho_Chi_Minh')
 		 FROM leave_requests lr
 		 JOIN employees e ON e.id = lr.employee_id

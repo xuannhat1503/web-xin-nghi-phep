@@ -15,7 +15,7 @@ ORDER BY updated_at DESC, id DESC
 LIMIT 20;
 
 -- name: GetOwnLeaveRequest :one
-SELECT lr.id, lr.request_code, lr.employee_id, lr.reviewer_id, lr.leave_type, lr.start_date, lr.end_date, lr.start_time, lr.end_time,
+SELECT lr.id, lr.request_code, lr.employee_id, lr.employee_name, lr.reviewer_id, lr.leave_type, lr.start_date, lr.end_date, lr.start_time, lr.end_time,
        lr.total_minutes, lr.reason_code, lr.reason_text, lr.status, lr.rejection_reason, lr.change_request_reason, lr.reviewed_at,
        lr.manager_name_snapshot, lr.manager_email_snapshot, lr.policy_version_id, lr.calculation_snapshot, lr.calendar_changed,
        lr.submit_count, lr.version, lr.created_at, lr.first_submitted_at, lr.submitted_at, lr.cancelled_at, lr.updated_at,
@@ -25,7 +25,7 @@ LEFT JOIN leave_reasons r ON r.code = lr.reason_code
 WHERE lr.id = sqlc.arg(id) AND lr.employee_id = sqlc.arg(employee_id);
 
 -- name: LockOwnLeaveRequest :one
-SELECT id, request_code, status, version, submit_count, leave_type, start_date, end_date, start_time, end_time, reason_code, reason_text
+SELECT id, request_code, status, version, submit_count, employee_name, leave_type, start_date, end_date, start_time, end_time, reason_code, reason_text
 FROM leave_requests
 WHERE id = sqlc.arg(id) AND employee_id = sqlc.arg(employee_id)
 FOR UPDATE;
@@ -33,7 +33,7 @@ FOR UPDATE;
 -- Auto-save: only the owner, only editable statuses, only the version they last saw.
 -- name: UpdateLeaveDraft :execrows
 UPDATE leave_requests
-SET leave_type = sqlc.narg(leave_type), start_date = sqlc.narg(start_date), end_date = sqlc.narg(end_date),
+SET employee_name = sqlc.narg(employee_name), leave_type = sqlc.narg(leave_type), start_date = sqlc.narg(start_date), end_date = sqlc.narg(end_date),
     start_time = sqlc.narg(start_time), end_time = sqlc.narg(end_time),
     reason_code = sqlc.narg(reason_code), reason_text = sqlc.arg(reason_text),
     total_minutes = sqlc.arg(total_minutes), version = version + 1
@@ -83,7 +83,7 @@ UPDATE request_code_sequences SET next_value = next_value + 1 WHERE year = sqlc.
 
 -- name: SubmitLeaveRequest :execrows
 UPDATE leave_requests
-SET status = 'PENDING', request_code = sqlc.arg(request_code), reviewer_id = sqlc.arg(reviewer_id),
+SET status = 'PENDING', request_code = sqlc.arg(request_code), reviewer_id = sqlc.arg(reviewer_id), employee_name = sqlc.arg(employee_name),
     total_minutes = sqlc.arg(total_minutes), policy_version_id = sqlc.arg(policy_version_id),
     calculation_snapshot = sqlc.arg(calculation_snapshot),
     manager_name_snapshot = sqlc.arg(manager_name), manager_email_snapshot = sqlc.arg(manager_email),
@@ -100,10 +100,10 @@ DELETE FROM leave_request_days WHERE leave_request_id = sqlc.arg(leave_request_i
 INSERT INTO leave_request_days (leave_request_id, work_date, minutes) VALUES (sqlc.arg(leave_request_id), sqlc.arg(work_date), sqlc.arg(minutes));
 
 -- name: InsertLeaveVersion :exec
-INSERT INTO leave_request_versions (leave_request_id, submit_no, leave_type, start_date, end_date, start_time, end_time,
+INSERT INTO leave_request_versions (leave_request_id, submit_no, employee_name, leave_type, start_date, end_date, start_time, end_time,
     total_minutes, reason_code, reason_text, reviewer_id, manager_name_snapshot, manager_email_snapshot,
     policy_version_id, calculation_snapshot, created_by)
-VALUES (sqlc.arg(leave_request_id), sqlc.arg(submit_no), sqlc.arg(leave_type), sqlc.arg(start_date), sqlc.arg(end_date),
+VALUES (sqlc.arg(leave_request_id), sqlc.arg(submit_no), sqlc.arg(employee_name), sqlc.arg(leave_type), sqlc.arg(start_date), sqlc.arg(end_date),
     sqlc.arg(start_time), sqlc.arg(end_time), sqlc.arg(total_minutes), sqlc.narg(reason_code), sqlc.arg(reason_text),
     sqlc.arg(reviewer_id), sqlc.arg(manager_name), sqlc.arg(manager_email), sqlc.arg(policy_version_id),
     sqlc.arg(calculation_snapshot), sqlc.arg(created_by));

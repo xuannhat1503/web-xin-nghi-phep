@@ -635,6 +635,7 @@ type LeaveRequest struct {
 	CancelledAt          sql.NullTime
 	UpdatedAt            time.Time
 	LeaveType            sql.NullString
+	EmployeeName         sql.NullString
 }
 
 type LeaveRequestDay struct {
@@ -676,6 +677,7 @@ type LeaveRequestVersion struct {
 	CreatedBy            uint64
 	CreatedAt            time.Time
 	LeaveType            string
+	EmployeeName         sql.NullString
 }
 
 type LeaveType struct {

@@ -30,6 +30,8 @@
 	const policy = untrack(() => data.context.policy);
 	const id = init.id;
 
+	// Name written on this request and its emails only; defaults to the account name.
+	let employeeName = $state(init.employee_name ?? untrack(() => data.context.employee.full_name));
 	let leaveType = $state(init.leave_type ?? '');
 	let startDate = $state(formatDate(init.start_date));
 	let endDate = $state(formatDate(init.end_date));
@@ -69,6 +71,7 @@
 		const sd = parseDisplayDate(startDate);
 		const ed = halfDay ? sd : (parseDisplayDate(endDate) ?? (endDate.trim() ? null : sd));
 		return {
+			employee_name: employeeName.trim() || null,
 			leave_type: leaveType || null,
 			start_date: sd,
 			end_date: ed,
@@ -269,7 +272,20 @@
 				<div>
 					<label for="emp-name" class="block text-sm font-medium"
 						>{i18n.t('leave.employeeName')}</label
-					><input id="emp-name" readonly class={ro} value={data.context.employee.full_name} />
+					>
+					<input
+						id="emp-name"
+						name="employee_name"
+						class={input}
+						maxlength="100"
+						bind:value={employeeName}
+						aria-describedby="emp-name-help"
+						aria-invalid={!!fieldIssue('employee_name')}
+					/>
+					{#if hydrated && fieldIssue('employee_name')}<p class="mt-1 text-sm text-red-700">
+							{issueText(i18n, fieldIssue('employee_name')!)}
+						</p>{/if}
+					<p id="emp-name-help" class="mt-1 text-xs text-slate-500">{i18n.t('leave.nameHelp')}</p>
 				</div>
 				<div>
 					<label for="emp-email" class="block text-sm font-medium"

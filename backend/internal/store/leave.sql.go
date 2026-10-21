@@ -194,7 +194,7 @@ func (q *Queries) GetManagerInfo(ctx context.Context, id uint64) (GetManagerInfo
 }
 
 const getOwnLeaveRequest = `-- name: GetOwnLeaveRequest :one
-SELECT lr.id, lr.request_code, lr.employee_id, lr.reviewer_id, lr.leave_type, lr.start_date, lr.end_date, lr.start_time, lr.end_time,
+SELECT lr.id, lr.request_code, lr.employee_id, lr.employee_name, lr.reviewer_id, lr.leave_type, lr.start_date, lr.end_date, lr.start_time, lr.end_time,
        lr.total_minutes, lr.reason_code, lr.reason_text, lr.status, lr.rejection_reason, lr.change_request_reason, lr.reviewed_at,
        lr.manager_name_snapshot, lr.manager_email_snapshot, lr.policy_version_id, lr.calculation_snapshot, lr.calendar_changed,
        lr.submit_count, lr.version, lr.created_at, lr.first_submitted_at, lr.submitted_at, lr.cancelled_at, lr.updated_at,
@@ -213,6 +213,7 @@ type GetOwnLeaveRequestRow struct {
 	ID                   uint64
 	RequestCode          sql.NullString
 	EmployeeID           uint64
+	EmployeeName         sql.NullString
 	ReviewerID           sql.NullInt64
 	LeaveType            sql.NullString
 	StartDate            sql.NullTime
@@ -248,6 +249,7 @@ func (q *Queries) GetOwnLeaveRequest(ctx context.Context, arg GetOwnLeaveRequest
 		&i.ID,
 		&i.RequestCode,
 		&i.EmployeeID,
+		&i.EmployeeName,
 		&i.ReviewerID,
 		&i.LeaveType,
 		&i.StartDate,
@@ -353,10 +355,10 @@ func (q *Queries) InsertLeaveEvent(ctx context.Context, arg InsertLeaveEventPara
 }
 
 const insertLeaveVersion = `-- name: InsertLeaveVersion :exec
-INSERT INTO leave_request_versions (leave_request_id, submit_no, leave_type, start_date, end_date, start_time, end_time,
+INSERT INTO leave_request_versions (leave_request_id, submit_no, employee_name, leave_type, start_date, end_date, start_time, end_time,
     total_minutes, reason_code, reason_text, reviewer_id, manager_name_snapshot, manager_email_snapshot,
     policy_version_id, calculation_snapshot, created_by)
-VALUES (?, ?, ?, ?, ?,
+VALUES (?, ?, ?, ?, ?, ?,
     ?, ?, ?, ?, ?,
     ?, ?, ?, ?,
     ?, ?)
@@ -365,6 +367,7 @@ VALUES (?, ?, ?, ?, ?,
 type InsertLeaveVersionParams struct {
 	LeaveRequestID      uint64
 	SubmitNo            uint16
+	EmployeeName        sql.NullString
 	LeaveType           string
 	StartDate           time.Time
 	EndDate             time.Time
@@ -385,6 +388,7 @@ func (q *Queries) InsertLeaveVersion(ctx context.Context, arg InsertLeaveVersion
 	_, err := q.db.ExecContext(ctx, insertLeaveVersion,
 		arg.LeaveRequestID,
 		arg.SubmitNo,
+		arg.EmployeeName,
 		arg.LeaveType,
 		arg.StartDate,
 		arg.EndDate,
@@ -497,7 +501,7 @@ func (q *Queries) LockEmployeeForSubmit(ctx context.Context, id uint64) (LockEmp
 }
 
 const lockOwnLeaveRequest = `-- name: LockOwnLeaveRequest :one
-SELECT id, request_code, status, version, submit_count, leave_type, start_date, end_date, start_time, end_time, reason_code, reason_text
+SELECT id, request_code, status, version, submit_count, employee_name, leave_type, start_date, end_date, start_time, end_time, reason_code, reason_text
 FROM leave_requests
 WHERE id = ? AND employee_id = ?
 FOR UPDATE
@@ -509,18 +513,19 @@ type LockOwnLeaveRequestParams struct {
 }
 
 type LockOwnLeaveRequestRow struct {
-	ID          uint64
-	RequestCode sql.NullString
-	Status      LeaveRequestsStatus
-	Version     uint32
-	SubmitCount uint16
-	LeaveType   sql.NullString
-	StartDate   sql.NullTime
-	EndDate     sql.NullTime
-	StartTime   sql.NullString
-	EndTime     sql.NullString
-	ReasonCode  sql.NullString
-	ReasonText  string
+	ID           uint64
+	RequestCode  sql.NullString
+	Status       LeaveRequestsStatus
+	Version      uint32
+	SubmitCount  uint16
+	EmployeeName sql.NullString
+	LeaveType    sql.NullString
+	StartDate    sql.NullTime
+	EndDate      sql.NullTime
+	StartTime    sql.NullString
+	EndTime      sql.NullString
+	ReasonCode   sql.NullString
+	ReasonText   string
 }
 
 func (q *Queries) LockOwnLeaveRequest(ctx context.Context, arg LockOwnLeaveRequestParams) (LockOwnLeaveRequestRow, error) {
@@ -532,6 +537,7 @@ func (q *Queries) LockOwnLeaveRequest(ctx context.Context, arg LockOwnLeaveReque
 		&i.Status,
 		&i.Version,
 		&i.SubmitCount,
+		&i.EmployeeName,
 		&i.LeaveType,
 		&i.StartDate,
 		&i.EndDate,
@@ -556,7 +562,7 @@ func (q *Queries) LockRequestCodeSequence(ctx context.Context, year uint16) (uin
 
 const submitLeaveRequest = `-- name: SubmitLeaveRequest :execrows
 UPDATE leave_requests
-SET status = 'PENDING', request_code = ?, reviewer_id = ?,
+SET status = 'PENDING', request_code = ?, reviewer_id = ?, employee_name = ?,
     total_minutes = ?, policy_version_id = ?,
     calculation_snapshot = ?,
     manager_name_snapshot = ?, manager_email_snapshot = ?,
@@ -570,6 +576,7 @@ WHERE id = ? AND employee_id = ? AND version = ?
 type SubmitLeaveRequestParams struct {
 	RequestCode         sql.NullString
 	ReviewerID          sql.NullInt64
+	EmployeeName        sql.NullString
 	TotalMinutes        uint32
 	PolicyVersionID     sql.NullInt64
 	CalculationSnapshot dbtypes.JSON
@@ -585,6 +592,7 @@ func (q *Queries) SubmitLeaveRequest(ctx context.Context, arg SubmitLeaveRequest
 	result, err := q.db.ExecContext(ctx, submitLeaveRequest,
 		arg.RequestCode,
 		arg.ReviewerID,
+		arg.EmployeeName,
 		arg.TotalMinutes,
 		arg.PolicyVersionID,
 		arg.CalculationSnapshot,
@@ -604,7 +612,7 @@ func (q *Queries) SubmitLeaveRequest(ctx context.Context, arg SubmitLeaveRequest
 
 const updateLeaveDraft = `-- name: UpdateLeaveDraft :execrows
 UPDATE leave_requests
-SET leave_type = ?, start_date = ?, end_date = ?,
+SET employee_name = ?, leave_type = ?, start_date = ?, end_date = ?,
     start_time = ?, end_time = ?,
     reason_code = ?, reason_text = ?,
     total_minutes = ?, version = version + 1
@@ -613,6 +621,7 @@ WHERE id = ? AND employee_id = ? AND version = ?
 `
 
 type UpdateLeaveDraftParams struct {
+	EmployeeName sql.NullString
 	LeaveType    sql.NullString
 	StartDate    sql.NullTime
 	EndDate      sql.NullTime
@@ -629,6 +638,7 @@ type UpdateLeaveDraftParams struct {
 // Auto-save: only the owner, only editable statuses, only the version they last saw.
 func (q *Queries) UpdateLeaveDraft(ctx context.Context, arg UpdateLeaveDraftParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, updateLeaveDraft,
+		arg.EmployeeName,
 		arg.LeaveType,
 		arg.StartDate,
 		arg.EndDate,

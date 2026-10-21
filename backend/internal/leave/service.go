@@ -61,6 +61,7 @@ type Request struct {
 	ID                  uint64       `json:"id"`
 	Code                *string      `json:"request_code"`
 	Status              string       `json:"status"`
+	EmployeeName        *string      `json:"employee_name"` // name written on this request (nil = profile name)
 	LeaveType           *string      `json:"leave_type"`
 	StartDate           *string      `json:"start_date"`
 	EndDate             *string      `json:"end_date"`
@@ -89,7 +90,7 @@ func toRequest(r store.GetOwnLeaveRequestRow) Request {
 	out := Request{
 		ID: r.ID, Code: nstr(r.RequestCode), Status: string(r.Status), TotalMinutes: r.TotalMinutes,
 		ReasonCode: nstr(r.ReasonCode), ReasonLabel: nstr(r.ReasonLabel), ReasonText: r.ReasonText,
-		RejectionReason: nstr(r.RejectionReason), ChangeRequestReason: nstr(r.ChangeRequestReason),
+		RejectionReason: nstr(r.RejectionReason), ChangeRequestReason: nstr(r.ChangeRequestReason), EmployeeName: nstr(r.EmployeeName),
 		Calculation: r.CalculationSnapshot, CalendarChanged: r.CalendarChanged, SubmitCount: r.SubmitCount,
 		Version: r.Version, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt,
 		FirstSubmittedAt: ntime(r.FirstSubmittedAt), SubmittedAt: ntime(r.SubmittedAt), ReviewedAt: ntime(r.ReviewedAt),
@@ -107,7 +108,7 @@ func toRequest(r store.GetOwnLeaveRequestRow) Request {
 }
 
 func (r Request) fields() Fields {
-	return Fields{LeaveType: r.LeaveType, StartDate: r.StartDate, EndDate: r.EndDate, StartTime: r.StartTime,
+	return Fields{EmployeeName: r.EmployeeName, LeaveType: r.LeaveType, StartDate: r.StartDate, EndDate: r.EndDate, StartTime: r.StartTime,
 		EndTime: r.EndTime, ReasonCode: r.ReasonCode, ReasonText: r.ReasonText}
 }
 
@@ -252,6 +253,7 @@ func (s *Service) SaveDraft(ctx context.Context, employeeID, id uint64, in SaveI
 			StartDate: nullDate(in.StartDate), EndDate: nullDate(in.EndDate),
 			StartTime: nullClock(in.StartTime), EndTime: nullClock(in.EndTime),
 			ReasonCode: nullStr(str(in.ReasonCode)), ReasonText: strings.TrimSpace(in.ReasonText),
+			EmployeeName: nullStr(requestName(in.EmployeeName, "")),
 			TotalMinutes: estimate, ID: id, EmployeeID: employeeID, Version: in.Version,
 		}
 		if t := str(in.LeaveType); t != "" {
@@ -325,7 +327,11 @@ func (s *Service) evaluateFields(ctx context.Context, q *store.Queries, employee
 	if err != nil {
 		loc = time.UTC
 	}
-	in := checkInput{fields: f, policy: pol, reasons: reasons, today: civil.DateOf(s.now().In(loc))}
+	emp, err := q.GetEmployeeByID(ctx, employeeID)
+	if err != nil {
+		return Evaluation{}, err
+	}
+	in := checkInput{fields: f, policy: pol, reasons: reasons, today: civil.DateOf(s.now().In(loc)), profileName: emp.FullName}
 
 	// Load the CONFIRMED calendar for the requested range (only when the dates parse).
 	if pr, _ := parseRange(f, pol.LeaveTypes, pol.LeaveUnitMinutes); pr.haveRange {
@@ -460,11 +466,7 @@ func (s *Service) Review(ctx context.Context, employeeID, id uint64) (Review, er
 	return out, nil
 }
 
-func (s *Service) renderApprovalEmail(ctx context.Context, c Context, req Request, ev Evaluation) (notification.Rendered, error) {
-	ov, err := s.settings.Overview(ctx)
-	if err != nil {
-		return notification.Rendered{}, err
-	}
+func (s *Service) renderApprovalEmail(_ context.Context, c Context, req Request, ev Evaluation) (notification.Rendered, error) {
 	reason := strings.TrimSpace(req.ReasonText)
 	if req.ReasonLabel != nil && *req.ReasonLabel != "" {
 		if reason != "" {
@@ -475,7 +477,7 @@ func (s *Service) renderApprovalEmail(ctx context.Context, c Context, req Reques
 	}
 	p := ev.parsed
 	return notification.ApprovalRequired(notification.LeaveEmail{
-		EmployeeName: c.Employee.Name, ManagerName: c.Manager.Name, ManagerEmail: c.Manager.Email, CC: ov.FinanceCC,
+		EmployeeName: requestName(req.EmployeeName, c.Employee.Name), ManagerName: c.Manager.Name, ManagerEmail: c.Manager.Email,
 		LeaveType: p.leaveType, StartDate: p.interval.StartDate, EndDate: p.interval.EndDate,
 		StartTime: p.interval.StartTime, EndTime: p.interval.EndTime,
 		TotalMinutes: ev.Calculation.TotalMinutes, MinutesPerDay: ev.MinutesPerDay, Reason: reason,
@@ -547,7 +549,7 @@ func (s *Service) Submit(ctx context.Context, employeeID, id uint64, version uin
 			return httpx.ErrConflict
 		}
 
-		f := Fields{ReasonCode: nstr(cur.ReasonCode), ReasonText: cur.ReasonText,
+		f := Fields{EmployeeName: nstr(cur.EmployeeName), ReasonCode: nstr(cur.ReasonCode), ReasonText: cur.ReasonText,
 			StartDate: ndate(cur.StartDate), EndDate: ndate(cur.EndDate), StartTime: nclock(cur.StartTime), EndTime: nclock(cur.EndTime)}
 		if cur.LeaveType.Valid {
 			t := cur.LeaveType.String
@@ -565,6 +567,7 @@ func (s *Service) Submit(ctx context.Context, employeeID, id uint64, version uin
 			return err
 		}
 
+		name := requestName(f.EmployeeName, emp.FullName)
 		code := cur.RequestCode
 		if !code.Valid {
 			c, err := allocateCode(ctx, q, now, ev.policy.Timezone)
@@ -575,7 +578,7 @@ func (s *Service) Submit(ctx context.Context, employeeID, id uint64, version uin
 		}
 		snap := mustJSON(snapshot(ev.policy, *ev.Calculation))
 		n, err := q.SubmitLeaveRequest(ctx, store.SubmitLeaveRequestParams{
-			RequestCode: code, ReviewerID: sql.NullInt64{Int64: int64(mgr.ID), Valid: true},
+			RequestCode: code, ReviewerID: sql.NullInt64{Int64: int64(mgr.ID), Valid: true}, EmployeeName: nullStr(name),
 			TotalMinutes: uint32(ev.Calculation.TotalMinutes), PolicyVersionID: sql.NullInt64{Int64: int64(ev.policy.VersionID), Valid: true},
 			CalculationSnapshot: dbtypes.JSON(snap), ManagerName: nullStr(mgr.FullName), ManagerEmail: nullStr(mgr.Email),
 			Now: sql.NullTime{Time: now, Valid: true}, ID: id, EmployeeID: employeeID, Version: version,
@@ -598,7 +601,7 @@ func (s *Service) Submit(ctx context.Context, employeeID, id uint64, version uin
 		submitNo := cur.SubmitCount + 1
 		p := ev.parsed
 		if err := q.InsertLeaveVersion(ctx, store.InsertLeaveVersionParams{
-			LeaveRequestID: id, SubmitNo: submitNo, LeaveType: p.leaveType,
+			LeaveRequestID: id, SubmitNo: submitNo, EmployeeName: nullStr(name), LeaveType: p.leaveType,
 			StartDate: p.interval.StartDate.UTC(), EndDate: p.interval.EndDate.UTC(),
 			StartTime: p.interval.StartTime.SQL(), EndTime: p.interval.EndTime.SQL(),
 			TotalMinutes: uint32(ev.Calculation.TotalMinutes), ReasonCode: nullStr(p.reasonCode), ReasonText: p.reasonText,
@@ -622,7 +625,7 @@ func (s *Service) Submit(ctx context.Context, employeeID, id uint64, version uin
 		// Notification + Mock Email outbox rows are written in this same transaction (never a real send).
 		if err := notification.Submitted(ctx, tx, notification.Ref{
 			RequestID: id, Code: code.String, Version: version + 1, SubmitNo: submitNo,
-			EmployeeID: employeeID, EmployeeName: emp.FullName, ReviewerID: mgr.ID, ReviewerName: mgr.FullName,
+			EmployeeID: employeeID, EmployeeName: name, ReviewerID: mgr.ID, ReviewerName: mgr.FullName,
 		}, action == "RESUBMITTED"); err != nil {
 			return err
 		}
