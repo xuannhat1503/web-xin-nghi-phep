@@ -42,7 +42,7 @@ export function navigation(user: CurrentEmployee, isReviewer: boolean): NavSecti
 				{ href: '/admin/holidays', label: 'nav.holidays' },
 				{ href: '/admin/settings', label: 'nav.settings' },
 				{ href: '/admin/notifications', label: 'nav.outbox' },
-				{ href: '/admin/mock-email', label: 'nav.mockEmail' },
+				{ href: '/admin/email-log', label: 'nav.emailLog' },
 				{ href: '/admin/system', label: 'nav.system' }
 			]
 		});

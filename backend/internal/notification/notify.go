@@ -35,6 +35,8 @@ const (
 	EmailResubmitted      = "RESUBMITTED"
 	EmailCancelled        = "CANCELLED"
 	EmailReassigned       = "REVIEWER_REASSIGNED"
+	// EmailFinanceApproved is Finance's own copy of an approved application (recipients: Finance CC list).
+	EmailFinanceApproved = "FINANCE_APPROVED"
 )
 
 // Ref identifies the request and the people involved in an event.
@@ -110,7 +112,14 @@ func Decided(ctx context.Context, x Execer, r Ref, status string) error {
 	if err := notify(ctx, x, r.EmployeeID, typ, r, ownerLink(r.RequestID), key(typ, r, r.EmployeeID), map[string]string{"name": r.ReviewerName}); err != nil {
 		return err
 	}
-	return enqueue(ctx, x, email, r, r.EmployeeID, key("mail:"+email, r, r.EmployeeID))
+	if err := enqueue(ctx, x, email, r, r.EmployeeID, key("mail:"+email, r, r.EmployeeID)); err != nil {
+		return err
+	}
+	if status == "APPROVED" {
+		// Recipient is the approver (named in the email); the Finance addresses are read when it is sent.
+		return enqueue(ctx, x, EmailFinanceApproved, r, r.ReviewerID, key("mail:"+EmailFinanceApproved, r, r.ReviewerID))
+	}
+	return nil
 }
 
 // Cancelled tells the current reviewer the employee withdrew the request.

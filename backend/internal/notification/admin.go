@@ -24,8 +24,8 @@ func NewAdmin(db *sql.DB, log *slog.Logger) *Admin { return &Admin{db: db, log: 
 func (h *Admin) Register(g gin.IRouter) {
 	g.GET("/outbox", h.outbox)
 	g.POST("/outbox/:id/retry", h.retry)
-	g.GET("/mock-emails", h.emails)
-	g.GET("/mock-emails/:id", h.email)
+	g.GET("/email-log", h.emails)
+	g.GET("/email-log/:id", h.email)
 }
 
 type OutboxItem struct {
@@ -135,19 +135,28 @@ type EmailSummary struct {
 	To        string    `json:"to"`
 	Subject   string    `json:"subject"`
 	CreatedAt time.Time `json:"created_at"`
+	// Delivery: SENT (left the server), NOT_SENT (sending was off), or the queue status while LIVE
+	// delivery is still PENDING / PROCESSING / FAILED.
+	Delivery    string     `json:"delivery"`
+	DeliveredAt *time.Time `json:"delivered_at"`
 }
+
+// deliverySQL derives EmailSummary.Delivery (m = mock_emails, o = notification_outbox).
+const deliverySQL = `CASE WHEN m.delivered_at IS NOT NULL THEN 'SENT'
+	WHEN m.transport = 'LIVE' THEN COALESCE(o.status, 'PENDING') ELSE 'NOT_SENT' END`
 
 // emails lists metadata only; the body (which contains the leave reason) is shown one email at a time.
 func (h *Admin) emails(c *gin.Context) {
 	ctx := c.Request.Context()
 	p := httpx.PageParam(c, 20, 20)
 	var total int64
-	if err := h.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM mock_emails").Scan(&total); err != nil {
+	if err := h.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM mock_emails m").Scan(&total); err != nil {
 		httpx.Fail(c, h.log, err)
 		return
 	}
 	rows, err := h.db.QueryContext(ctx,
-		"SELECT id, email_type, to_address, subject, created_at FROM mock_emails ORDER BY id DESC LIMIT ? OFFSET ?", p.Limit(), p.Offset())
+		"SELECT m.id, m.email_type, m.to_address, m.subject, m.created_at, "+deliverySQL+", m.delivered_at"+
+			" FROM mock_emails m LEFT JOIN notification_outbox o ON o.id = m.outbox_id ORDER BY m.id DESC LIMIT ? OFFSET ?", p.Limit(), p.Offset())
 	if err != nil {
 		httpx.Fail(c, h.log, err)
 		return
@@ -156,9 +165,13 @@ func (h *Admin) emails(c *gin.Context) {
 	var items []EmailSummary
 	for rows.Next() {
 		var it EmailSummary
-		if err := rows.Scan(&it.ID, &it.EmailType, &it.To, &it.Subject, &it.CreatedAt); err != nil {
+		var at sql.NullTime
+		if err := rows.Scan(&it.ID, &it.EmailType, &it.To, &it.Subject, &it.CreatedAt, &it.Delivery, &at); err != nil {
 			httpx.Fail(c, h.log, err)
 			return
+		}
+		if at.Valid {
+			it.DeliveredAt = &at.Time
 		}
 		items = append(items, it)
 	}
@@ -172,10 +185,13 @@ func (h *Admin) email(c *gin.Context) {
 		return
 	}
 	var it EmailSummary
-	var cc, body, transport string
+	var cc, body string
+	var at sql.NullTime
+	var deliveredTo, lastError sql.NullString
 	err = h.db.QueryRowContext(c.Request.Context(),
-		"SELECT id, email_type, to_address, cc_addresses, subject, body_text, transport, created_at FROM mock_emails WHERE id = ?", id).
-		Scan(&it.ID, &it.EmailType, &it.To, &cc, &it.Subject, &body, &transport, &it.CreatedAt)
+		"SELECT m.id, m.email_type, m.to_address, m.cc_addresses, m.subject, m.body_text, m.created_at, "+deliverySQL+
+			", m.delivered_at, m.delivered_to, o.last_error FROM mock_emails m LEFT JOIN notification_outbox o ON o.id = m.outbox_id WHERE m.id = ?", id).
+		Scan(&it.ID, &it.EmailType, &it.To, &cc, &it.Subject, &body, &it.CreatedAt, &it.Delivery, &at, &deliveredTo, &lastError)
 	if err == sql.ErrNoRows {
 		httpx.Fail(c, h.log, httpx.ErrNotFound)
 		return
@@ -190,5 +206,12 @@ func (h *Admin) email(c *gin.Context) {
 			ccList = append(ccList, a)
 		}
 	}
-	c.JSON(http.StatusOK, gin.H{"email": it, "cc": ccList, "body": body, "transport": transport})
+	if at.Valid {
+		it.DeliveredAt = &at.Time
+	}
+	var errText *string
+	if it.Delivery != "SENT" && lastError.Valid {
+		errText = &lastError.String
+	}
+	c.JSON(http.StatusOK, gin.H{"email": it, "cc": ccList, "body": body, "delivered_to": deliveredTo.String, "error": errText})
 }

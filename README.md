@@ -2,7 +2,7 @@
 
 Ứng dụng web nội bộ quản lý đơn xin nghỉ phép: Go (Gin, `database/sql`, sqlc) + SvelteKit + MySQL 8.
 
-> **Chạy local trên Windows.** Email mặc định ở chế độ MOCK (không gửi); Admin có thể bật TEST_EMAIL (chỉ gửi tới hộp thư test).
+> Email mặc định **tắt gửi** (chỉ lưu ở Nhật ký email); Admin bật trong Cấu hình nghỉ phép → Email (cần `EMAIL_LIVE_ENABLED=true` + SMTP trong `.env`).
 
 ## Trạng thái
 
@@ -13,7 +13,7 @@
 | 3 | Admin: nhân viên, Manager, lịch nghỉ, cài đặt | ✅ Hoàn thành |
 | 4 | Working Calendar, form xin nghỉ, auto-save, Review & Confirm | ✅ Hoàn thành |
 | 5 | Duyệt, Request Changes, resubmit | ✅ Hoàn thành |
-| 6 | Notification, reminder, Mock Email/outbox, TEST_EMAIL | ✅ Hoàn thành |
+| 6 | Notification, reminder, hàng đợi + nhật ký email | ✅ Hoàn thành |
 | 7 | Dashboard, Analytics, timeline, lọc/phân trang | ✅ Hoàn thành |
 | 8 | Bảo mật, hiệu năng | ✅ Hoàn thành |
 
@@ -140,14 +140,14 @@ Gmail khác đăng nhập lần đầu → tạo **EMPLOYEE chưa kích hoạt**
 
 ### Ngôn ngữ giao diện
 
-Mặc định **tiếng Việt**; nút **VI / EN** ở góc trên (lưu bằng cookie `lang`). Mock Email luôn bằng tiếng Anh theo mẫu `mailsample.txt`.
+Mặc định **tiếng Việt**; nút **VI / EN** ở góc trên (lưu bằng cookie `lang`). Email luôn bằng tiếng Anh theo mẫu `mailsample.txt`.
 
 ### Tạo đơn nghỉ (Phase 4)
 
 1. Menu **Tạo đơn nghỉ** → **Tạo đơn mới** (tạo bản nháp) hoặc **Tiếp tục** một bản nháp.
 2. Chọn loại nghỉ, *Cả ngày / Nửa ngày sáng / Nửa ngày chiều / Tùy chọn giờ*, ngày dạng **dd/MM/yyyy** (lịch chọn ngày đánh dấu ngày lễ / làm bù / ngày nghỉ), lý do.
 3. Thời gian nghỉ dự kiến được tính ngay (bỏ ngày nghỉ, ngày lễ đã xác nhận, giờ nghỉ trưa; tính ngày làm bù). Bản nháp **tự lưu** sau ~1,5 giây.
-4. **Xem lại & gửi** → kiểm tra thông tin + xem trước Mock Email → **Xác nhận & gửi**. Backend kiểm tra lại toàn bộ: chính sách loại nghỉ, lịch đã xác nhận, Manager, trùng đơn; cấp mã `LR-YYYY-NNNNNN`.
+4. **Xem lại & gửi** → kiểm tra thông tin + xem trước email → **Xác nhận & gửi**. Backend kiểm tra lại toàn bộ: chính sách loại nghỉ, lịch đã xác nhận, Manager, trùng đơn; cấp mã `LR-YYYY-NNNNNN`.
 
 Điều kiện gửi được: lịch nghỉ các năm liên quan đã **CONFIRMED**, nhân viên **có Manager đang hoạt động**.
 
@@ -160,17 +160,16 @@ Mặc định **tiếng Việt**; nút **VI / EN** ở góc trên (lưu bằng c
 | `/leader/dashboard`, `/leader/requests`, `/leader/requests/[id]` | Người duyệt | Chỉ đơn đang được giao; **Duyệt / Từ chối / Yêu cầu bổ sung** (2 lựa chọn sau bắt buộc lý do), có hộp xác nhận |
 | `/notifications` | Nhân viên, người duyệt | Thông báo trong web; mở trang là tất cả được đánh dấu đã đọc (chuông trên header) |
 | `/admin/dashboard` | Admin | KPI và 3 biểu đồ theo năm/tháng (chỉ số liệu tổng hợp) |
-| `/admin/notifications`, `/admin/mock-email` | Admin | Hàng đợi email (thử lại khi lỗi) và nội dung email đã tạo/gửi |
+| `/admin/notifications`, `/admin/email-log` | Admin | Hàng đợi email (thử lại khi lỗi) và Nhật ký email (nội dung + trạng thái đã gửi) |
 | `/admin/system` | Admin | DB, migration, tác vụ nền, hàng đợi, lỗi vận hành (đã lọc) |
 
-Tác vụ nền trong `cmd/server`: tạo Mock Email (30 giây), nhắc Leader (5 phút, theo cài đặt), dọn session, idempotency key, Mock Email cũ hơn 30 ngày.
+Tác vụ nền trong `cmd/server`: gửi email (30 giây), nhắc Leader (5 phút, theo cài đặt), dọn session, idempotency key, nhật ký email cũ hơn 30 ngày.
 
 Tài khoản **Admin vừa quản lý vừa xin nghỉ được** (như nhân viên: cần có Manager mới gửi được đơn). Sau đăng nhập Admin vào `/admin/dashboard`; mục "Đơn của tôi" vẫn có trong menu.
 
-Email: gửi đơn → TO manager; duyệt → TO nhân viên, CC Finance; từ chối / yêu cầu sửa → TO nhân viên; hủy → TO manager. Ba chế độ (tab Email):
-- **MOCK**: không gửi, chỉ lưu để xem ở Mock Email.
-- **TEST_EMAIL**: gửi thật nhưng **chỉ** tới TO/CC test (nội dung giống hệt mail thật, cuối mail ghi người nhận gốc; chặn `@g-asiapac.com.vn`).
-- **LIVE**: gửi tới đúng người nhận. Chỉ chọn được khi `.env` có `EMAIL_LIVE_ENABLED=true`; mọi người nhận phải thuộc `ALLOWED_EMAILS` / `ALLOWED_EMAIL_DOMAIN` (nếu đặt).
+Email: gửi đơn → TO manager; duyệt → TO nhân viên, và một email riêng cho Finance ("Apply for Leave_… [Approved]", ghi người duyệt; địa chỉ Finance đầu tiên là TO, còn lại CC); từ chối / yêu cầu sửa → TO nhân viên; hủy → TO manager. Hai trạng thái (tab Email):
+- **Tắt gửi email**: email chỉ được lưu ở Nhật ký email.
+- **Bật gửi email**: gửi tới đúng người nhận. Chỉ chọn được khi `.env` có `EMAIL_LIVE_ENABLED=true`; mọi người nhận phải thuộc `ALLOWED_EMAILS` / `ALLOWED_EMAIL_DOMAIN` (nếu đặt).
 
 `ALLOWED_EMAILS` (danh sách email) / `ALLOWED_EMAIL_DOMAIN` (ví dụ `g-asiapac.com.vn`) cũng giới hạn **đăng nhập**; email trong `BOOTSTRAP_ADMIN_EMAILS` luôn được phép. Để trống cả hai = không giới hạn (chỉ dùng khi dev).
 
@@ -180,7 +179,7 @@ Email: gửi đơn → TO manager; duyệt → TO nhân viên, CC Finance; từ 
 |---|---|
 | `/admin/employees` | Tìm kiếm, lọc *Pending activation* / *No manager*, phân trang 20/trang; kích hoạt/vô hiệu hóa (thu hồi phiên ngay), đổi role, gán/bỏ Manager kèm lý do; lịch sử thay đổi |
 | `/admin/holidays` | Chọn năm, xem List/Calendar, lọc loại/trạng thái; *Suggest Vietnamese holidays* (DRAFT), thêm/sửa/xóa nháp, xác nhận từng ngày hoặc cả năm; cảnh báo lịch thiếu; nhật ký thay đổi |
-| `/admin/settings` | **Cấu hình nghỉ phép**, chia tab: Giờ làm việc · Quy định nghỉ · Nhắc duyệt (lưu chung thành **phiên bản policy mới, bất biến**) · Loại nghỉ · Lý do nghỉ (thêm/sửa/xóa; đã dùng trong đơn thì chỉ ngừng dùng) · Email (MOCK/TEST_EMAIL, Finance CC) · Lịch sử |
+| `/admin/settings` | **Cấu hình nghỉ phép**, chia tab: Giờ làm việc · Quy định nghỉ · Nhắc duyệt (lưu chung thành **phiên bản policy mới, bất biến**) · Loại nghỉ · Lý do nghỉ (thêm/sửa/xóa; đã dùng trong đơn thì chỉ ngừng dùng) · Email (bật/tắt gửi, danh sách Tài chính) · Lịch sử |
 
 Quy tắc chính: không tự làm Manager của mình, không tạo chu trình Manager (khóa toàn cục chống race), Manager phải active, luôn còn ít nhất 1 Admin active, Admin không tự hạ quyền/vô hiệu hóa. Sửa lịch của năm đã CONFIRMED sẽ mở lại năm (DRAFT) và đánh dấu đơn bị ảnh hưởng — không bao giờ tính lại đơn đã duyệt.
 

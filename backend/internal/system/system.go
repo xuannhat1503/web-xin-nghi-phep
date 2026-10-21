@@ -111,7 +111,7 @@ func (h *Handlers) status(c *gin.Context) {
 	if m, err := notification.LoadEmailMode(ctx, h.db); err == nil {
 		out["email_mode"] = m.Name
 	} else {
-		out["email_mode"] = "MOCK"
+		out["email_mode"] = "OFF"
 	}
 	c.JSON(http.StatusOK, out)
 }

@@ -35,9 +35,6 @@ export const serverVi: Record<string, string> = {
 	'Invalid or missing CSRF token': 'Phiên làm việc không hợp lệ. Hãy tải lại trang.',
 	'Invalid request body': 'Dữ liệu gửi lên không hợp lệ.',
 	'Label must be 2-200 characters.': 'Tên hiển thị gồm 2-200 ký tự.',
-	'Choose MOCK, TEST_EMAIL or LIVE.': 'Chọn MOCK, TEST_EMAIL hoặc LIVE.',
-	'LIVE is locked: set EMAIL_LIVE_ENABLED=true in the server .env and restart.':
-		'LIVE đang bị khóa: đặt EMAIL_LIVE_ENABLED=true trong .env của server rồi khởi động lại.',
 	'Configure SMTP_HOST, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD and SMTP_FROM in .env first.':
 		'Cần cấu hình SMTP_HOST, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD và SMTP_FROM trong .env trước.',
 	'Name must be 2-100 characters.': 'Tên gồm 2-100 ký tự.',
@@ -108,5 +105,24 @@ export const serverVi: Record<string, string> = {
 		'Bạn đã có 20 bản nháp. Hãy gửi hoặc xóa bớt trước.',
 	'Employee not found': 'Không tìm thấy nhân viên.',
 	'Calendar day not found': 'Không tìm thấy ngày lịch.',
-	'Leave request not found': 'Không tìm thấy đơn nghỉ.'
+	'Leave request not found': 'Không tìm thấy đơn nghỉ.',
+	'Choose whether emails are sent.': 'Chọn bật hoặc tắt gửi email.',
+	'Sending is locked: set EMAIL_LIVE_ENABLED=true in the server .env and restart.':
+		'Chưa bật được gửi email: đặt EMAIL_LIVE_ENABLED=true trong .env của server rồi khởi động lại.',
+	'Leave request no longer exists.': 'Đơn nghỉ không còn tồn tại.',
+	'Recipient not found.': 'Không tìm thấy người nhận.',
+	'The recipient has no email address.': 'Người nhận không có địa chỉ email.',
+	'Unknown email type.': 'Loại email không xác định.',
+	'Rendering failed. See server logs.': 'Không tạo được nội dung email. Xem log của server.',
+	'Email sending is on but EMAIL_LIVE_ENABLED is not true in .env.':
+		'Đang bật gửi email nhưng .env của server chưa có EMAIL_LIVE_ENABLED=true.',
+	'Email sending is on but SMTP is not configured in .env.':
+		'Đang bật gửi email nhưng chưa cấu hình SMTP trong .env.',
+	'SMTP send failed. Check the SMTP settings in .env and the server log.':
+		'Gửi qua SMTP thất bại. Kiểm tra cấu hình SMTP trong .env và log của server.',
+	'A recipient is not allowed by ALLOWED_EMAILS / ALLOWED_EMAIL_DOMAIN.':
+		'Có người nhận không thuộc ALLOWED_EMAILS / ALLOWED_EMAIL_DOMAIN (xem log để biết địa chỉ).',
+	'Job failed. See server logs.': 'Tác vụ bị lỗi. Xem log của server.',
+	'Background job failed. See server logs for details.':
+		'Tác vụ nền bị lỗi. Xem chi tiết trong log của server.'
 };

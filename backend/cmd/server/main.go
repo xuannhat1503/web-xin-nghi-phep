@@ -97,9 +97,9 @@ func run() error {
 	workerCtx, stopWorkers := context.WithCancel(context.Background())
 	waitWorkers := worker.Start(workerCtx, db, log,
 		worker.Job{Name: "session_cleanup", Interval: 10 * time.Minute, Run: authSvc.Cleanup},
-		worker.Job{Name: "mock_email_outbox", Interval: 30 * time.Second, Run: outbox.Process},
+		worker.Job{Name: "email_outbox", Interval: 30 * time.Second, Run: outbox.Process},
 		worker.Job{Name: "leader_reminders", Interval: 5 * time.Minute, Run: notification.Reminders{DB: db}.Run},
-		worker.Job{Name: "mock_email_retention", Interval: 6 * time.Hour, Run: outbox.Cleanup},
+		worker.Job{Name: "email_log_retention", Interval: 6 * time.Hour, Run: outbox.Cleanup},
 		worker.Job{Name: "idempotency_cleanup", Interval: time.Hour, Run: func(ctx context.Context) error {
 			_, err := store.New(db).DeleteExpiredIdempotencyKeys(ctx, time.Now().UTC())
 			return err

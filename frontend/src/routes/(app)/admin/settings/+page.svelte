@@ -718,81 +718,54 @@
 	<section class="{card} mt-6" aria-labelledby="mail-h">
 		<h2 id="mail-h" class="font-semibold">{i18n.t('set.email')}</h2>
 		<p class="mt-1 text-sm text-slate-600">{i18n.t('set.emailHelp')}</p>
-		<p class="mt-2 text-sm {s.email.smtp_configured ? 'text-emerald-700' : 'text-amber-800'}">
-			{s.email.smtp_configured
-				? i18n.t('set.smtpOk', { from: s.email.smtp_from })
-				: i18n.t('set.smtpMissing')}
-		</p>
+		<ul class="mt-3 space-y-1 text-sm">
+			<li class={s.email.smtp_configured ? 'text-emerald-700' : 'text-amber-800'}>
+				{s.email.smtp_configured
+					? i18n.t('set.smtpOk', { from: s.email.smtp_from })
+					: i18n.t('set.smtpMissing')}
+			</li>
+			{#if !s.email.live_enabled}<li class="text-amber-800">{i18n.t('set.liveLocked')}</li>{/if}
+			<li class={accessText ? 'text-slate-600' : 'text-amber-800'}>
+				{accessText ? i18n.t('set.accessList', { list: accessText }) : i18n.t('set.accessOpen')}
+			</li>
+		</ul>
 		<form method="POST" action={act('email')} use:enhance={enhanced} class="mt-4 space-y-4">
 			<input type="hidden" name="version" value={s.settings_version} />
 			<fieldset>
 				<legend class="text-sm font-medium">{i18n.t('set.emailMode')}</legend>
-				<div class="mt-2 flex flex-wrap gap-3 text-sm">
-					<label class="flex items-center gap-2"
-						><input type="radio" name="mode" value="MOCK" bind:group={mailMode} />{i18n.t(
-							'set.modeMock'
-						)}</label
+				<div class="mt-2 grid gap-2 sm:grid-cols-2">
+					<label
+						class="flex items-start gap-2 rounded-lg border border-slate-300 p-3 text-sm has-[:checked]:border-brand-600 has-[:checked]:bg-brand-50"
+						><input type="radio" name="mode" value="OFF" bind:group={mailMode} class="mt-0.5" />
+						<span
+							><span class="font-medium">{i18n.t('set.modeOff')}</span><br /><span
+								class="text-slate-600">{i18n.t('set.modeOffHelp')}</span
+							></span
+						></label
 					>
-					<label class="flex items-center gap-2"
-						><input
-							type="radio"
-							name="mode"
-							value="TEST_EMAIL"
-							bind:group={mailMode}
-							disabled={!s.email.smtp_configured}
-						/>{i18n.t('set.modeTest')}</label
-					>
-					<label class="flex items-center gap-2"
+					<label
+						class="flex items-start gap-2 rounded-lg border border-slate-300 p-3 text-sm has-[:checked]:border-brand-600 has-[:checked]:bg-brand-50 has-[:disabled]:opacity-60"
 						><input
 							type="radio"
 							name="mode"
 							value="LIVE"
 							bind:group={mailMode}
 							disabled={!s.email.smtp_configured || !s.email.live_enabled}
-						/>{i18n.t('set.modeLive')}</label
+							class="mt-0.5"
+						/>
+						<span
+							><span class="font-medium">{i18n.t('set.modeLive')}</span><br /><span
+								class="text-slate-600">{i18n.t('set.modeLiveHelp')}</span
+							></span
+						></label
 					>
 				</div>
-				{#if !s.email.live_enabled}<p class="mt-1 text-xs text-slate-500">
-						{i18n.t('set.liveLocked')}
-					</p>{/if}
-				<p class="mt-1 text-xs {accessText ? 'text-slate-600' : 'text-amber-800'}">
-					{accessText ? i18n.t('set.accessList', { list: accessText }) : i18n.t('set.accessOpen')}
-				</p>
 				{#if err('mode')}<p class="mt-1 text-sm text-red-700">{err('mode')}</p>{/if}
 			</fieldset>
-			<div class="grid gap-4 sm:grid-cols-2">
-				<div>
-					<label for="test_to" class="block text-sm font-medium">{i18n.t('set.testTo')}</label>
-					<input
-						id="test_to"
-						name="test_to"
-						type="email"
-						maxlength="254"
-						class={input}
-						value={s.email.test_to}
-					/>
-					{#if err('test_to')}<p class="mt-1 text-sm text-red-700">{err('test_to')}</p>{/if}
-				</div>
-				<div>
-					<label for="test_cc" class="block text-sm font-medium">{i18n.t('set.testCc')}</label>
-					<textarea id="test_cc" name="test_cc" rows="2" class={input}
-						>{s.email.test_cc.join('\n')}</textarea
-					>
-					{#if err('test_cc')}<p class="mt-1 text-sm text-red-700">{err('test_cc')}</p>{/if}
-				</div>
-			</div>
 			<ConfirmButton
 				label={i18n.t('set.saveEmail')}
-				title={mailMode === 'LIVE'
-					? i18n.t('set.saveLiveTitle')
-					: mailMode === 'TEST_EMAIL'
-						? i18n.t('set.saveEmailTitle')
-						: i18n.t('set.saveMockTitle')}
-				message={mailMode === 'LIVE'
-					? i18n.t('set.saveLiveMsg')
-					: mailMode === 'TEST_EMAIL'
-						? i18n.t('set.saveEmailMsg')
-						: i18n.t('set.saveMockMsg')}
+				title={mailMode === 'LIVE' ? i18n.t('set.saveLiveTitle') : i18n.t('set.saveOffTitle')}
+				message={mailMode === 'LIVE' ? i18n.t('set.saveLiveMsg') : i18n.t('set.saveOffMsg')}
 				confirmLabel={i18n.t('common.save')}
 				tone={mailMode === 'LIVE' ? 'danger' : 'primary'}
 				class={primary}

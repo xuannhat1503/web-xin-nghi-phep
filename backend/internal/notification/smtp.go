@@ -18,7 +18,7 @@ import (
 )
 
 // smtpSend delivers one plain-text message. Port 465 uses implicit TLS; other ports require STARTTLS.
-// Callers must have passed CheckTestAllowlist first.
+// Callers must have checked every recipient against the access allowlist first.
 func smtpSend(ctx context.Context, cfg config.SMTP, to string, cc []string, subject, body string) error {
 	clean := func(s string) string { return strings.NewReplacer("\r", " ", "\n", " ").Replace(s) }
 	addr := net.JoinHostPort(cfg.Host, strconv.Itoa(cfg.Port))

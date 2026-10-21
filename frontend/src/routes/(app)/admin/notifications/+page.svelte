@@ -5,15 +5,13 @@
 	import PageHeader from '#lib/components/PageHeader.svelte';
 	import Pagination from '#lib/components/Pagination.svelte';
 	import { useI18n } from '#lib/i18n/index.ts';
-	import { formatDateTime } from '#lib/format.ts';
+	import { emailTypeLabel, formatDateTime, queueLabel, queueTone } from '#lib/format.ts';
 	import { withToast } from '#lib/forms.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
 	const i18n = useI18n();
 	const enhanced = withToast(i18n);
-	const tone = (s: string) =>
-		s === 'SENT' ? 'green' : s === 'FAILED' ? 'red' : s === 'PROCESSING' ? 'blue' : 'amber';
 	const filters = ['', 'PENDING', 'PROCESSING', 'SENT', 'FAILED'];
 </script>
 
@@ -30,7 +28,7 @@
 				? 'border-brand-600 bg-brand-50 text-brand-800'
 				: 'border-slate-300 bg-white'}"
 		>
-			{f || i18n.t('outbox.all')}{f ? ` (${data.counts[f] ?? 0})` : ''}
+			{f ? queueLabel(i18n, f) : i18n.t('outbox.all')}{f ? ` (${data.counts[f] ?? 0})` : ''}
 		</a>
 	{/each}
 </nav>
@@ -60,18 +58,22 @@
 					{#each data.page.items as o (o.id)}
 						<tr>
 							<td class="px-4 py-3"
-								>{o.event_type}
+								>{emailTypeLabel(i18n, o.event_type)}
 								<p class="text-xs text-slate-500">{formatDateTime(o.created_at)}</p></td
 							>
 							<td class="px-4 py-3">{o.request_code ?? '—'}</td>
-							<td class="px-4 py-3"><Badge tone={tone(o.status)} label={o.status} /></td>
+							<td class="px-4 py-3"
+								><Badge tone={queueTone(o.status)} label={queueLabel(i18n, o.status)} /></td
+							>
 							<td class="px-4 py-3 tabular-nums">{o.attempts}</td>
 							<td class="px-4 py-3"
 								>{o.status === 'SENT'
 									? formatDateTime(o.processed_at)
 									: formatDateTime(o.next_retry_at)}</td
 							>
-							<td class="px-4 py-3 text-slate-600">{o.last_error ?? ''}</td>
+							<td class="px-4 py-3 text-slate-600"
+								>{o.last_error ? i18n.server(o.last_error) : ''}</td
+							>
 							<td class="px-4 py-3 text-right">
 								{#if o.status === 'FAILED'}
 									<form method="POST" action="?/retry" use:enhance={enhanced}>

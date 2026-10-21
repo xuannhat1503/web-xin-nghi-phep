@@ -143,9 +143,7 @@ export interface SettingsOverview {
 		{ version_no: number; change_note: string; created_at: string; created_by: string }[] | null;
 	open_requests: Record<string, number>;
 	email: {
-		mode: 'MOCK' | 'TEST_EMAIL' | 'LIVE';
-		test_to: string;
-		test_cc: string[];
+		mode: 'OFF' | 'LIVE';
 		smtp_configured: boolean;
 		smtp_from: string;
 		live_enabled: boolean;

@@ -112,14 +112,11 @@ func (o Outbox) Process(ctx context.Context) error {
 	return nil
 }
 
-// EmailMode is the Admin-selected delivery mode and test recipients.
+// EmailMode is the Admin-selected delivery mode: OFF (log only) or LIVE (send to the real recipients).
 type EmailMode struct {
-	Name string // MOCK | TEST_EMAIL | LIVE
-	To   string // test inbox (TEST_EMAIL only)
-	CC   []string
+	Name string // OFF | LIVE
 }
 
-func (m EmailMode) Test() bool { return m.Name == "TEST_EMAIL" }
 func (m EmailMode) Live() bool { return m.Name == "LIVE" }
 
 func splitList(s string) []string {
@@ -133,12 +130,11 @@ func splitList(s string) []string {
 }
 
 func LoadEmailMode(ctx context.Context, db dbtx) (EmailMode, error) {
-	var mode, to, cc string
-	if err := db.QueryRowContext(ctx, "SELECT email_mode, test_email_to, test_email_cc FROM company_settings WHERE id = 1").
-		Scan(&mode, &to, &cc); err != nil {
+	var mode string
+	if err := db.QueryRowContext(ctx, "SELECT email_mode FROM company_settings WHERE id = 1").Scan(&mode); err != nil {
 		return EmailMode{}, err
 	}
-	return EmailMode{Name: mode, To: to, CC: splitList(cc)}, nil
+	return EmailMode{Name: mode}, nil
 }
 
 // errRender errors carry only safe, generic text (stored and shown on the admin pages).
@@ -161,20 +157,23 @@ func (o Outbox) deliver(ctx context.Context, db dbtx, t task, mode EmailMode) er
 		startDate, endDate                                 time.Time
 		total                                              int
 		snapshot                                           []byte
-		employeeName                                       string
+		employeeName, timezone                             string
+		reviewedAt                                         sql.NullTime
 	)
 	err := db.QueryRowContext(ctx,
 		`SELECT COALESCE(lt.name_en, lr.leave_type), lr.start_date, lr.end_date, lr.start_time, lr.end_time,
 		        lr.total_minutes, lr.reason_code, lr.reason_text, lr.rejection_reason, lr.change_request_reason,
-		        COALESCE(lr.calculation_snapshot, JSON_OBJECT()), e.full_name, rv.full_name, COALESCE(NULLIF(rs.label_en, ''), rs.label)
+		        COALESCE(lr.calculation_snapshot, JSON_OBJECT()), e.full_name, rv.full_name, COALESCE(NULLIF(rs.label_en, ''), rs.label),
+		        lr.reviewed_at, COALESCE(pv.timezone, 'Asia/Ho_Chi_Minh')
 		 FROM leave_requests lr
 		 JOIN employees e ON e.id = lr.employee_id
 		 LEFT JOIN employees rv ON rv.id = lr.reviewer_id
 		 LEFT JOIN leave_reasons rs ON rs.code = lr.reason_code
 		 LEFT JOIN leave_types lt ON lt.code = lr.leave_type
+		 LEFT JOIN policy_versions pv ON pv.id = lr.policy_version_id
 		 WHERE lr.id = ?`, t.payload.RequestID).
 		Scan(&leaveType, &startDate, &endDate, &startTime, &endTime, &total, &reasonC, &reasonText,
-			&rejection, &changes, &snapshot, &employeeName, &reviewer, &reasonLabel)
+			&rejection, &changes, &snapshot, &employeeName, &reviewer, &reasonLabel, &reviewedAt, &timezone)
 	if errors.Is(err, sql.ErrNoRows) {
 		return errRender("Leave request no longer exists.")
 	}
@@ -201,15 +200,20 @@ func (o Outbox) deliver(ctx context.Context, db dbtx, t task, mode EmailMode) er
 	if t.eventType == EmailApprovalRequired || t.eventType == EmailResubmitted || t.eventType == EmailCancelled || t.eventType == EmailReassigned {
 		link = fmt.Sprintf("%s/leader/requests/%d", o.Origin, t.payload.RequestID)
 	}
+	toEmail, toName := recipientEmail, recipientName
 	var cc []string
-	// Finance is copied only on approval, so it sees each leave once, with the final approved details.
-	if t.eventType == EmailApproved {
+	// Finance gets its own copy of the application once it is approved (recipient_id is the approver).
+	if t.eventType == EmailFinanceApproved {
 		var list string
 		_ = db.QueryRowContext(ctx, "SELECT finance_cc_emails FROM company_settings WHERE id = 1").Scan(&list)
-		cc = splitList(list)
+		finance := splitList(list)
+		if len(finance) == 0 {
+			return nil // no Finance addresses configured: nothing to send
+		}
+		toEmail, toName, cc = finance[0], "Finance team", finance[1:]
 	}
 	e := LeaveEmail{
-		EmployeeName: employeeName, ManagerName: recipientName, ManagerEmail: recipientEmail, CC: cc,
+		EmployeeName: employeeName, ManagerName: toName, ManagerEmail: toEmail, CC: cc,
 		LeaveType: leaveType, StartDate: civil.DateOf(startDate), EndDate: civil.DateOf(endDate),
 		StartTime: st, EndTime: et, TotalMinutes: total, MinutesPerDay: snap.MinutesPerDay, Reason: reason, ReviewLink: link,
 	}
@@ -223,30 +227,37 @@ func (o Outbox) deliver(ctx context.Context, db dbtx, t task, mode EmailMode) er
 		r = StatusEmail(t.eventType, recipientName, e, changes.String)
 	case EmailApproved, EmailResubmitted, EmailCancelled, EmailReassigned:
 		r = StatusEmail(t.eventType, recipientName, e, "")
+	case EmailFinanceApproved:
+		approved := ""
+		if reviewedAt.Valid {
+			loc, err := time.LoadLocation(timezone)
+			if err != nil {
+				loc = time.UTC
+			}
+			approved = reviewedAt.Time.In(loc).Format("02/01/2006 15:04")
+		}
+		r = FinanceApproved(e, recipientName, approved)
 	default:
 		return errRender("Unknown email type.")
 	}
-	transport := "MOCK"
-	if mode.Test() || mode.Live() {
-		transport = mode.Name
+	transport := "OFF"
+	if mode.Live() {
+		transport = "LIVE"
 	}
-	// Stored first; UNIQUE(outbox_id) keeps retries idempotent.
+	// Stored first (the email log); UNIQUE(outbox_id) keeps retries idempotent.
 	if _, err := db.ExecContext(ctx,
 		`INSERT IGNORE INTO mock_emails (outbox_id, email_type, to_address, cc_addresses, subject, body_text, transport)
 		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		t.id, t.eventType, r.To, strings.Join(r.CC, ","), r.Subject, r.Body, transport); err != nil {
 		return err
 	}
-	switch {
-	case mode.Test():
-		return o.sendTest(ctx, db, t.id, r, mode)
-	case mode.Live():
+	if mode.Live() {
 		return o.sendLive(ctx, db, t.id, r)
 	}
 	return nil
 }
 
-// sendLive delivers to the real recipients (manager / employee, Finance CC on approval). It needs
+// sendLive delivers to the real recipients (manager / employee, Finance on approval). It needs
 // EMAIL_LIVE_ENABLED=true on the server, and every address must pass ALLOWED_EMAILS / ALLOWED_EMAIL_DOMAIN.
 // A message already delivered is never sent again.
 func (o Outbox) sendLive(ctx context.Context, db dbtx, outboxID uint64, r Rendered) error {
@@ -258,17 +269,18 @@ func (o Outbox) sendLive(ctx context.Context, db dbtx, outboxID uint64, r Render
 		return nil
 	}
 	if !o.Live {
-		return errRender("LIVE is selected but EMAIL_LIVE_ENABLED is not true in .env.")
+		return errRender("Email sending is on but EMAIL_LIVE_ENABLED is not true in .env.")
 	}
 	if !o.SMTP.Configured() {
-		return errRender("LIVE is selected but SMTP is not configured in .env.")
+		return errRender("Email sending is on but SMTP is not configured in .env.")
 	}
 	if strings.TrimSpace(r.To) == "" {
 		return errRender("The recipient has no email address.")
 	}
 	for _, a := range append([]string{r.To}, r.CC...) {
 		if !o.Access.Allows(a) {
-			return errRender("A recipient is not allowed by ALLOWED_EMAILS / ALLOWED_EMAIL_DOMAIN: " + a)
+			slog.Warn("email recipient not allowed", slog.Uint64("outbox_id", outboxID), slog.String("recipient", a))
+			return errRender("A recipient is not allowed by ALLOWED_EMAILS / ALLOWED_EMAIL_DOMAIN.")
 		}
 	}
 	if err := smtpSend(ctx, o.SMTP, r.To, r.CC, r.Subject, r.Body); err != nil {
@@ -277,37 +289,6 @@ func (o Outbox) sendLive(ctx context.Context, db dbtx, outboxID uint64, r Render
 	}
 	_, err := db.ExecContext(ctx, "UPDATE mock_emails SET delivered_to = ?, delivered_at = UTC_TIMESTAMP(3) WHERE outbox_id = ?",
 		strings.Join(append([]string{r.To}, r.CC...), ","), outboxID)
-	return err
-}
-
-// sendTest delivers a stored message to the test inbox only (never to the real recipients, who are listed in
-// a footer). A message already delivered is never sent again.
-func (o Outbox) sendTest(ctx context.Context, db dbtx, outboxID uint64, r Rendered, mode EmailMode) error {
-	var delivered sql.NullTime
-	if err := db.QueryRowContext(ctx, "SELECT delivered_at FROM mock_emails WHERE outbox_id = ?", outboxID).Scan(&delivered); err != nil {
-		return err
-	}
-	if delivered.Valid {
-		return nil
-	}
-	if !o.SMTP.Configured() {
-		return errRender("TEST_EMAIL is selected but SMTP is not configured in .env.")
-	}
-	if err := CheckTestAllowlist(mode.To, mode.CC, nil, mode.To, mode.CC); err != nil {
-		return errRender("Test recipients are not allowed (empty TO or company domain).")
-	}
-	// Same subject and body as LIVE; only a short footer says who the message was really addressed to.
-	intended := "Originally addressed to: " + r.To
-	if len(r.CC) > 0 {
-		intended += " | CC: " + strings.Join(r.CC, ", ")
-	}
-	body := r.Body + "\n---\n" + intended + "\n"
-	if err := smtpSend(ctx, o.SMTP, mode.To, mode.CC, r.Subject, body); err != nil {
-		slog.Warn("test email send failed", slog.Uint64("outbox_id", outboxID), slog.String("error", err.Error()))
-		return errRender("SMTP send failed. Check the SMTP settings in .env and the server log.")
-	}
-	_, err := db.ExecContext(ctx, "UPDATE mock_emails SET delivered_to = ?, delivered_at = UTC_TIMESTAMP(3) WHERE outbox_id = ?",
-		strings.Join(append([]string{mode.To}, mode.CC...), ","), outboxID)
 	return err
 }
 

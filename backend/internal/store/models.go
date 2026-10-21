@@ -197,9 +197,8 @@ func AllCalendarYearsStatusValues() []CalendarYearsStatus {
 type CompanySettingsEmailMode string
 
 const (
-	CompanySettingsEmailModeMOCK      CompanySettingsEmailMode = "MOCK"
-	CompanySettingsEmailModeTESTEMAIL CompanySettingsEmailMode = "TEST_EMAIL"
-	CompanySettingsEmailModeLIVE      CompanySettingsEmailMode = "LIVE"
+	CompanySettingsEmailModeOFF  CompanySettingsEmailMode = "OFF"
+	CompanySettingsEmailModeLIVE CompanySettingsEmailMode = "LIVE"
 )
 
 func (e *CompanySettingsEmailMode) Scan(src interface{}) error {
@@ -239,8 +238,7 @@ func (ns NullCompanySettingsEmailMode) Value() (driver.Value, error) {
 
 func (e CompanySettingsEmailMode) Valid() bool {
 	switch e {
-	case CompanySettingsEmailModeMOCK,
-		CompanySettingsEmailModeTESTEMAIL,
+	case CompanySettingsEmailModeOFF,
 		CompanySettingsEmailModeLIVE:
 		return true
 	}
@@ -249,8 +247,7 @@ func (e CompanySettingsEmailMode) Valid() bool {
 
 func AllCompanySettingsEmailModeValues() []CompanySettingsEmailMode {
 	return []CompanySettingsEmailMode{
-		CompanySettingsEmailModeMOCK,
-		CompanySettingsEmailModeTESTEMAIL,
+		CompanySettingsEmailModeOFF,
 		CompanySettingsEmailModeLIVE,
 	}
 }
@@ -558,8 +555,6 @@ type CompanySetting struct {
 	Version                uint32
 	UpdatedBy              sql.NullInt64
 	UpdatedAt              time.Time
-	TestEmailTo            string
-	TestEmailCc            string
 	EmailMode              CompanySettingsEmailMode
 }
 

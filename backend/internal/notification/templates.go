@@ -127,3 +127,29 @@ func StatusEmail(emailType, recipientName string, e LeaveEmail, comment string) 
 	}
 	return Rendered{To: e.ManagerEmail, CC: cc, Subject: subject, Body: b.String()}
 }
+
+// FinanceApproved is Finance's own copy of an approved application: the same "Apply for Leave" content the
+// manager received, plus who approved it and when. No link (Finance has no access to the request in the app).
+func FinanceApproved(e LeaveEmail, approverName, approvedAt string) Rendered {
+	subject := fmt.Sprintf("Apply for Leave_%s_%s [Approved]", e.EmployeeName, LeaveDates(e.StartDate, e.EndDate))
+	var b strings.Builder
+	fmt.Fprintf(&b, "Dear %s,\n\n", e.ManagerName)
+	b.WriteString("The following leave application has been approved.\n")
+	if approvedAt != "" {
+		fmt.Fprintf(&b, "Approved by: %s on %s\n\n", approverName, approvedAt)
+	} else {
+		fmt.Fprintf(&b, "Approved by: %s\n\n", approverName)
+	}
+	fmt.Fprintf(&b, "Employee: %s\n", e.EmployeeName)
+	fmt.Fprintf(&b, "Kind of leave: %s\n", e.LeaveType)
+	fmt.Fprintf(&b, "Leave from date: %s\n", ddmmyyyy(e.StartDate))
+	fmt.Fprintf(&b, "Leave to date: %s\n", ddmmyyyy(e.EndDate))
+	fmt.Fprintf(&b, "Time-off: from %s to %s\n", e.StartTime, e.EndTime)
+	fmt.Fprintf(&b, "Total requested time-off: %s\n", FormatDuration(e.TotalMinutes, e.MinutesPerDay))
+	fmt.Fprintf(&b, "Leave Reason: %s\n", e.Reason)
+	cc := e.CC
+	if cc == nil {
+		cc = []string{}
+	}
+	return Rendered{To: e.ManagerEmail, CC: cc, Subject: subject, Body: b.String()}
+}

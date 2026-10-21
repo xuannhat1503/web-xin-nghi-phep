@@ -48,9 +48,7 @@ export const actions = {
 		const f = await event.request.formData();
 		const res = await api(event, 'PUT', '/api/v1/admin/settings/email', {
 			version: int(f, 'version'),
-			mode: str(f, 'mode'),
-			test_to: str(f, 'test_to'),
-			test_cc: list(str(f, 'test_cc'))
+			mode: str(f, 'mode')
 		});
 		return actionResult(res, 'toast.emailSaved');
 	},

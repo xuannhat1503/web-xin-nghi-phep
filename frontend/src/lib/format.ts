@@ -133,3 +133,33 @@ export function yearOptions(selected?: number | null, back = 5): number[] {
 		years.push(selected);
 	return years.sort((a, b) => b - a);
 }
+
+type Tone = 'green' | 'amber' | 'red' | 'blue' | 'slate' | 'violet';
+
+/** Email kinds (APPROVAL_REQUIRED, FINANCE_APPROVED, …) in the current language. */
+export function emailTypeLabel(i18n: I18n, t: string): string {
+	const key = `mailtype.${t}`;
+	return hasMsg(i18n, key) ? i18n.t(key as MessageKey) : t;
+}
+
+/** Email delivery state: SENT | NOT_SENT | PENDING | PROCESSING | FAILED. */
+export function deliveryLabel(i18n: I18n, d: string): string {
+	const key = `delivery.${d}`;
+	return hasMsg(i18n, key) ? i18n.t(key as MessageKey) : d;
+}
+
+export function deliveryTone(d: string): Tone {
+	return d === 'SENT' ? 'green' : d === 'FAILED' ? 'red' : d === 'NOT_SENT' ? 'slate' : 'amber';
+}
+
+/** Email queue task status: PENDING | PROCESSING | SENT | FAILED. */
+export function queueLabel(i18n: I18n, s: string): string {
+	const key = `queue.${s}`;
+	return hasMsg(i18n, key) ? i18n.t(key as MessageKey) : s;
+}
+
+export function queueTone(s: string): Tone {
+	return s === 'SENT' ? 'green' : s === 'FAILED' ? 'red' : s === 'PROCESSING' ? 'blue' : 'amber';
+}
+
+const hasMsg = (i18n: I18n, key: string) => i18n.t(key as MessageKey) !== key;

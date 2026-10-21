@@ -13,6 +13,7 @@ sql:
       - db/migrations/000011_email_mode.up.sql
       - db/migrations/000012_leave_types.up.sql
       - db/migrations/000013_email_live.up.sql
+      - db/migrations/000014_email_off_live.up.sql
     queries: db/queries
     gen:
       go:
